@@ -94,9 +94,8 @@ Feel free to use, modify, and distribute.
 Pull requests are welcome. For major changes, please open an issue first to discuss.
 
 👨‍💻 Author
-Your Name
-📧 aroonk644@gmail.com
-🔗 https://github.com/AroonKumarr
+
+📧 afnanshoukat35@gmail.com
 
 
 ---
