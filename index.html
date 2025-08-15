@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>AroonChat</title>
+    <style>
+       :root{
+  --header-h: 64px;
+  --sidebar-w: 280px;
+  --accent: #0077b6;
+  --accent-2: #0ea5e9;
+  --bg: #f4f6f8;
+  --text: #0f1724;
+  --muted: #6b7280;
+  --radius: 12px;
+  --user-gradient: linear-gradient(180deg,#2f80ed,#1b66c8);
+  --bot-bg: linear-gradient(180deg,#ffffff,#f3f7fb);
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; font-family: "Segoe UI", Roboto, Arial, sans-serif; color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+
+header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--header-h);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background: linear-gradient(90deg, #0f7ac1 0%, #1372b7 100%);
+  color: #fff;
+  font-weight: 700;
+  z-index: 1000;
+  box-shadow: 0 6px 18px rgba(7,28,63,0.12);
+}
+
+/* Sidebar (fixed under header) */
+#sidebar{
+  position: fixed;
+  top: var(--header-h);
+  left: 0;
+  bottom: 0;
+  width: var(--sidebar-w);
+  padding: 12px;
+  background: linear-gradient(180deg,#0f1724,#071027);
+  color: #e6eef9;
+  border-right: 1px solid rgba(255,255,255,0.03);
+  overflow-y: auto;
+}
+
+/* New chat button */
+#newChatBtn{
+  display:block;
+  width: calc(100% - 24px);
+  margin: 8px 12px;
+  padding: 12px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  font-weight: 700;
+  color: white;
+  background: linear-gradient(90deg,var(--accent-2), var(--accent));
+  box-shadow: 0 8px 22px rgba(0,120,180,0.12);
+}
+
+/* Chat list */
+#chatList{ list-style:none; padding: 8px 4px; margin: 12px 0; }
+.chat-item{
+  padding: 12px;
+  margin: 8px 6px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #cfe9ff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: transform .12s ease, background .12s ease;
+}
+.chat-item:hover, .chat-item:focus{ transform: translateX(4px); background: rgba(255,255,255,0.02); outline: none; }
+.chat-item.active{
+  background: linear-gradient(90deg,var(--accent-2),#0b6fa0);
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+}
+
+/* Main area sits to the right of sidebar */
+#mainArea{
+  margin-left: var(--sidebar-w);
+  padding-top: var(--header-h);
+  display:flex;
+  flex-direction:column;
+  min-height: 100vh;
+  background: transparent;
+}
+
+/* Chat container */
+#chat-container{
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display:flex;
+  flex-direction:column;
+  gap: 12px;
+  margin: 16px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.85), rgba(255,255,255,0.98));
+  box-shadow: 0 8px 30px rgba(10,18,30,0.04);
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Messages (user + bot) */
+.message{
+  max-width: 72%;
+  padding: 12px 14px;
+  border-radius: 14px;
+  line-height: 1.45;
+  word-wrap: break-word;
+  box-shadow: 0 6px 18px rgba(3,18,26,0.04);
+}
+
+/* User bubble */
+.user{
+  align-self: flex-end;
+}
+.user { background: var(--user-gradient); color: white; border-bottom-right-radius: 6px; box-shadow: 0 10px 30px rgba(30,80,170,0.12); }
+
+/* Bot bubble */
+.bot{
+  align-self:flex-start;
+}
+.bot { background: var(--bot-bg); color: #07304a; border-bottom-left-radius: 6px; }
+
+/* Footer / composer */
+footer{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  padding: 12px;
+  margin: 12px;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 -2px 8px rgba(0,0,0,0.04);
+}
+
+/* Text input */
+input[type="text"]{
+  flex:1;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  font-size: 1rem;
+  outline: none;
+  transition: box-shadow .16s ease, border-color .16s ease;
+}
+input[type="text"]:focus{
+  box-shadow: 0 6px 18px rgba(14,68,140,0.06);
+  border-color: #4a90e2;
+}
+
+/* Buttons */
+button{
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: transform .12s ease, filter .12s ease;
+}
+button:hover{ transform: translateY(-2px); filter: brightness(1.03); }
+
+/* Record button styles and pulsing when .recording is applied */
+#recordBtn{ background: #e74c3c; }
+#recordBtn.recording{ background: #c0392b; position:relative; box-shadow: 0 8px 30px rgba(192,57,43,0.18); }
+#recordBtn.recording::after{
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  background: rgba(192,57,43,0.12);
+  animation: pulse 1.6s infinite;
+}
+@keyframes pulse{ 0%{ transform: scale(.95); opacity: 1 } 100%{ transform: scale(1.6); opacity: 0 } }
+.pagination {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 20px;
+  font-family: Arial, sans-serif;
+}
+
+.pagination a {
+  display: inline-block;
+  padding: 8px 14px;
+  font-size: 14px;
+  text-decoration: none;
+  color: #333;
+  background-color: #f0f0f0;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  transition: all 0.25s ease;
+}
+
+.pagination a:hover {
+  background-color: #4a90e2;
+  color: #fff;
+  transform: scale(1.08);
+}
+
+.pagination a.active {
+  background-color: #4a90e2;
+  color: #fff;
+  border-color: #4a90e2;
+  font-weight: bold;
+  font-size: 16px;
+  transform: scale(1.2);
+}
+
+.pagination a:active {
+  transform: scale(1.15);
+}
+
+/* mobile adjustments */
+@media (max-width: 900px){
+  #sidebar{ width: 72px; padding: 12px 6px; }
+  #mainArea{ margin-left: 72px; }
+  .chat-item{ font-size: .88rem; padding: 10px; }
+  #chat-container{ margin: 8px; padding: 12px; }
+  footer{ margin: 8px; padding: 10px; }
+}
+
+    </style>
+</head>
+<body>
+    <header>AroonChat</header>
+
+    <div id="sidebar">
+        <button id="newChatBtn">+ New Chat</button>
+        <ul id="chatList"></ul>
+    </div>
+
+    <div id="mainArea">
+        <div id="chat-container"></div>
+
+        <footer>
+            <input type="text" id="messageInput" placeholder="Type a message...">
+            <button id="sendBtn">Send</button>
+            <button id="recordBtn">🎤</button>
+            <button id="clearBtn" style="background:#dc3545; margin-left: 0.5rem;">Clear Chat</button>
+        </footer>
+    </div>
+
+
+
+<script>
+  // Elements
+  const chatContainer = document.getElementById("chat-container");
+  const userInput = document.getElementById("messageInput");
+  const clearBtn = document.getElementById("clearBtn");
+  const sendBtn = document.getElementById("sendBtn");
+  const recordBtn = document.getElementById("recordBtn");
+  const chatListEl = document.getElementById("chatList");
+  const newChatBtn = document.getElementById("newChatBtn");
+
+  // Media recorder variables
+  let mediaRecorder;
+  let audioChunks = [];
+  let isRecording = false;
+
+  // Conversations storage and current chat
+  let conversations = JSON.parse(localStorage.getItem('conversations') || '[]');
+  let currentChatId = conversations.length > 0 ? conversations[0].id : null;
+
+  // Save conversations to localStorage
+  function saveConversations() {
+    localStorage.setItem('conversations', JSON.stringify(conversations));
+  }
+
+  // Initialize app: load or create chat, render sidebar & messages
+  function init() {
+    if (conversations.length === 0) {
+      createNewChat();
+    } else {
+      currentChatId = conversations[0].id;
+    }
+    renderChatList();
+    renderChatMessages();
+  }
+
+  // Create new chat conversation
+  function createNewChat() {
+    const id = `chat_${Date.now()}`;
+    const title = `Chat on ${new Date().toLocaleString()}`;
+    const newChat = { id, title, messages: [] };
+    conversations.unshift(newChat);
+    currentChatId = id;
+    saveConversations();
+    renderChatList();
+    renderChatMessages();
+  }
+
+  // Render chat list sidebar
+  function renderChatList() {
+    if (!chatListEl) return; // If sidebar not present, skip
+    chatListEl.innerHTML = "";
+    conversations.forEach(chat => {
+      const li = document.createElement("li");
+      li.textContent = chat.title;
+      li.classList.toggle("active", chat.id === currentChatId);
+      li.onclick = () => {
+        currentChatId = chat.id;
+        renderChatList();
+        renderChatMessages();
+      };
+      chatListEl.appendChild(li);
+    });
+  }
+
+  // Render messages for current chat
+  function renderChatMessages() {
+    chatContainer.innerHTML = "";
+    const chat = conversations.find(c => c.id === currentChatId);
+    if (!chat) {
+      chatContainer.textContent = "No chat selected.";
+      return;
+    }
+    chat.messages.forEach(msg => {
+      addMessage(msg.text, msg.sender, false);
+    });
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+  }
+
+  // Append message to chat UI, optionally save it to current chat conversation
+  function addMessage(text, sender, save = true) {
+    const div = document.createElement("div");
+    div.classList.add("message", sender === "user" ? "user" : "bot");
+    div.textContent = text;
+    chatContainer.appendChild(div);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+
+    if (save && currentChatId) {
+      const chat = conversations.find(c => c.id === currentChatId);
+      if (chat) {
+        chat.messages.push({ sender, text });
+        saveConversations();
+        renderChatList(); // update sidebar
+      }
+    }
+  }
+
+  // Clear current conversation (clear UI and remove messages from storage)
+ clearBtn.addEventListener("click", () => {
+  if (!currentChatId) return; // no chat selected, nothing to do
+
+  // Find index of current chat
+  const chatIndex = conversations.findIndex(c => c.id === currentChatId);
+  if (chatIndex === -1) return; // chat not found, exit
+
+  // Remove the entire chat from the conversations array
+  conversations.splice(chatIndex, 1);
+
+  // Save updated conversations to localStorage
+  saveConversations();
+
+  // Clear the chat UI
+  chatContainer.innerHTML = "";
+
+  // If there are still chats left, select the first one
+  if (conversations.length > 0) {
+    currentChatId = conversations[0].id;
+  } else {
+    currentChatId = null;
+  }
+
+  // Re-render sidebar and messages
+  renderChatList();
+  renderChatMessages();
+});
+
+  // Start recording audio
+  async function startRecording() {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream);
+    audioChunks = [];
+
+    mediaRecorder.ondataavailable = e => {
+      if (e.data.size > 0) audioChunks.push(e.data);
+    };
+
+    mediaRecorder.onstop = async () => {
+      const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
+      const formData = new FormData();
+      formData.append("file", audioBlob, "recording.webm");
+
+      addMessage("🎤 (Processing...)", "user");
+
+      try {
+        const res = await fetch("/transcribe", {
+          method: "POST",
+          body: formData
+        });
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const data = await res.json();
+
+        if (data.text) {
+          addMessage(data.text, "user");
+
+          // Send transcribed text to chat
+          const chatRes = await fetch("/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: data.text })
+          });
+
+          if (!chatRes.ok) throw new Error(`HTTP ${chatRes.status}`);
+
+          const chatData = await chatRes.json();
+          addMessage(chatData.reply || chatData.error, "bot");
+        } else {
+          addMessage("Error: " + (data.error || "Failed to transcribe"), "bot");
+        }
+      } catch (error) {
+        addMessage("Error: " + error.message, "bot");
+        console.error(error);
+      }
+    };
+
+    mediaRecorder.start();
+    isRecording = true;
+    recordBtn.textContent = "⏹";
+    recordBtn.classList.add("recording");
+  }
+
+  // Stop recording audio
+  function stopRecording() {
+    mediaRecorder.stop();
+    isRecording = false;
+    recordBtn.textContent = "🎤";
+    recordBtn.classList.remove("recording");
+  }
+
+  async function sendMessage() {
+  const text = userInput.value.trim();
+  if (!text) return;
+
+  addMessage(text, "user");
+  userInput.value = "";
+
+  try {
+    const res = await fetch("/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: text })
+    });
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const data = await res.json();
+    addMessage(data.reply || data.error, "bot");
+  } catch (error) {
+    addMessage("Error: " + error.message, "bot");
+    console.error(error);
+  }
+}
+
+
+  // Event listeners
+  sendBtn.addEventListener("click", sendMessage);
+  userInput.addEventListener("keypress", e => {
+    if (e.key === "Enter") sendMessage();
+  });
+
+  recordBtn.addEventListener("click", () => {
+    if (!isRecording) {
+      startRecording();
+    } else {
+      stopRecording();
+    }
+  });
+
+  if (newChatBtn) {
+    newChatBtn.addEventListener("click", createNewChat);
+  }
+
+  // Initialize app on load
+  window.onload = () => {
+    init();
+  };
+</script>
+
+</body>
+</html>
